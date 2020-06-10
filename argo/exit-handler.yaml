@@ -1,0 +1,83 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: run-map-
+  namespace: user-llh
+spec:
+  arguments: {}
+  entrypoint: main
+  onExit: exit-handler
+  serviceAccountName: argo
+  templates:
+    - dag:
+        tasks:
+          - arguments:
+              parameters:
+                - name: branch
+                  value: release-4.0
+            name: mirrortable-tidb-40
+            template: deploy-tidb
+          - arguments:
+              parameters:
+                - name: pd-host
+                  value: hello
+            name: run-mirrortable-40
+            template: divide-by-2
+          - arguments:
+              parameters:
+                - name: branch
+                  value: release-4.0
+            name: mirrortable-tidb-master
+            template: deploy-tidb
+      inputs: {}
+      metadata: {}
+      name: main
+      outputs: {}
+    - inputs:
+        parameters:
+          - name: branch
+            value: master
+      metadata: {}
+      name: deploy-tidb
+      outputs: {}
+      script:
+        command:
+          - python
+        image: hub.pingcap.net/zyguan/schedule:bigtxn
+        imagePullPolicy: Always
+        name: ""
+        resources: {}
+        source: |
+          import time
+          import json
+          import time
+          time.sleep(10)
+          print(json.dumps([{"pd-host":"127.0.0.1"},{"pd-host":"127.0.0.1"}]))
+    - inputs:
+        parameters:
+          - name: pd-host
+      metadata: {}
+      name: divide-by-2
+      outputs: {}
+      script:
+        command:
+          - sh
+          - -x
+        image: alpine:latest
+        name: ""
+        resources: {}
+        source: echo {{inputs.parameters.pd-host}} | xxx
+    - metadata: {}
+      name: exit-handler
+      outputs: {}
+      script:
+        command:
+          - python
+        image: hub.pingcap.net/zyguan/schedule:bigtxn
+        imagePullPolicy: Always
+        name: ""
+        source: |
+          import requests
+          res = requests.post("http://172.16.4.61:30128/reports",json={})
+          if res.status_code != 200:
+            print(res.text)

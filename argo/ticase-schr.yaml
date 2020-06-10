@@ -1,0 +1,457 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: run-schrtest-
+  namespace: user-llh
+spec:
+  entrypoint: main
+  serviceAccountName: argo
+  templates:
+  - name: main
+    dag:
+      tasks:
+      - arguments:
+          parameters:
+          - name: branch
+            value: release-4.0
+          - name: name
+            value: mirrortable
+        name: mirrortable-tidb-40
+        template: deploy-tidb
+      - arguments:
+          parameters:
+            - name: db-host
+              value: '{{item.db_host}}'
+            - name: pd-host
+              value: '{{item.pd_host}}'
+            - name: binary
+              value: mirrortable
+        withParam: '{{tasks.mirrortable-tidb-40.outputs.result}}'
+        dependencies: [mirrortable-tidb-40]
+        name: run-mirrortable-40
+        template: run-test
+      - arguments:
+          parameters:
+            - name: branch
+              value: release-4.0
+            - name: name
+              value: mirrortable
+        dependencies: [run-mirrortable-40]
+        name: mirrortable-tidb-master
+        template: deploy-tidb
+      - arguments:
+          parameters:
+            - name: db-host
+              value: '{{item.db_host}}'
+            - name: pd-host
+              value: '{{item.pd_host}}'
+            - name: binary
+              value: mirrortable
+        withParam: '{{tasks.mirrortable-tidb-master.outputs.result}}'
+        dependencies: [mirrortable-tidb-master]
+        name: run-mirrortable-master
+        template: run-test
+      - arguments:
+          parameters:
+            - name: branch
+              value: release-4.0
+            - name: name
+              value: deadlock
+        name: deadlock-tidb-40
+        template: deploy-tidb
+      - arguments:
+          parameters:
+            - name: db-host
+              value: '{{item.db_host}}'
+            - name: pd-host
+              value: '{{item.pd_host}}'
+            - name: binary
+              value: deadlock
+        withParam: '{{tasks.deadlock-tidb-40.outputs.result}}'
+        dependencies: [deadlock-tidb-40]
+        name: run-deadlock-40
+        template: run-test
+      - arguments:
+          parameters:
+            - name: branch
+              value: release-4.0
+            - name: name
+              value: deadlock
+        dependencies: [run-deadlock-40]
+        name: deadlock-tidb-master
+        template: deploy-tidb
+      - arguments:
+          parameters:
+            - name: db-host
+              value: '{{item.db_host}}'
+            - name: pd-host
+              value: '{{item.pd_host}}'
+            - name: binary
+              value: deadlock
+        withParam: '{{tasks.deadlock-tidb-master.outputs.result}}'
+        dependencies: [deadlock-tidb-master]
+        name: run-deadlock-master
+        template: run-test
+      - arguments:
+          parameters:
+            - name: branch
+              value: release-4.0
+            - name: name
+              value: single-stmt-rollback
+            - name: pd-replica
+              value: 2
+            - name: db-replica
+              value: 2
+            - name: kv-replica
+              value: 3
+        name: single-stmt-rollback-tidb-40
+        template: deploy-tidb
+      - arguments:
+          parameters:
+            - name: db-host
+              value: '{{item.db_host}}'
+            - name: pd-host
+              value: '{{item.pd_host}}'
+            - name: binary
+              value: single-stmt-rollback
+        withParam: '{{tasks.single-stmt-rollback-tidb-40.outputs.result}}'
+        dependencies: [single-stmt-rollback-tidb-40]
+        name: run-single-stmt-rollback-40
+        template: run-test
+      - arguments:
+          parameters:
+            - name: branch
+              value: release-4.0
+            - name: name
+              value: single-stmt-rollback
+            - name: pd-replica
+              value: 2
+            - name: db-replica
+              value: 2
+            - name: kv-replica
+              value: 3
+        dependencies: [run-single-stmt-rollback-40]
+        name: single-stmt-rollback-tidb-master
+        template: deploy-tidb
+      - arguments:
+          parameters:
+            - name: db-host
+              value: '{{item.db_host}}'
+            - name: pd-host
+              value: '{{item.pd_host}}'
+            - name: binary
+              value: single-stmt-rollback
+        withParam: '{{tasks.single-stmt-rollback-tidb-master.outputs.result}}'
+        dependencies: [single-stmt-rollback-tidb-master]
+        name: run-single-stmt-rollback-master
+        template: run-test
+      - arguments:
+          parameters:
+            - name: branch
+              value: release-4.0
+            - name: name
+              value: mvccbank
+        name: mvccbank-tidb-40
+        template: deploy-tidb
+      - arguments:
+          parameters:
+            - name: db-host
+              value: '{{item.db_host}}'
+            - name: pd-host
+              value: '{{item.pd_host}}'
+            - name: binary
+              value: mvccbank
+        withParam: '{{tasks.mvccbank-tidb-40.outputs.result}}'
+        dependencies: [mvccbank-tidb-40]
+        name: run-mvccbank-40
+        template: run-test
+      - arguments:
+          parameters:
+            - name: branch
+              value: release-4.0
+            - name: name
+              value: mvccbank
+        dependencies: [run-mvccbank-40]
+        name: mvccbank-tidb-master
+        template: deploy-tidb
+      - arguments:
+          parameters:
+            - name: db-host
+              value: '{{item.db_host}}'
+            - name: pd-host
+              value: '{{item.pd_host}}'
+            - name: binary
+              value: mvccbank
+        withParam: '{{tasks.mvccbank-tidb-master.outputs.result}}'
+        dependencies: [mvccbank-tidb-master]
+        name: run-mvccbank-master
+        template: run-test
+  - inputs:
+      parameters:
+      - name: db-host
+      - name: pd-host
+      - name: binary
+    name: run-test
+    script:
+      command:
+      - bash
+      image: python:3.8.2
+      source: |
+        set -xe
+        curl -s http://fileserver.pingcap.net/download/pingcap/qa/draft/{{inputs.parameters.binary}}.tar.gz | tar -zx
+        ./{{inputs.parameters.binary}} --db-dsn="root:@tcp({{inputs.parameters.db-host}}:4000)/test"  --pd-endpoints="{{inputs.parameters.pd-host}}:2379"
+  - inputs:
+      parameters:
+      - name: branch
+        value: master
+      - name: name
+      - name: pd-replica
+        value: 1
+      - name: db-replica
+        value: 1
+      - name: kv-replica
+        value: 1
+    name: deploy-tidb
+    script:
+      command:
+      - python
+      image: hub.pingcap.net/zyguan/schedule:bigtxn
+      imagePullPolicy: Always
+      source: |
+        import logging
+        import time
+        import json
+        import pymysql
+        import sys
+        from kubernetes import client, config
+
+        G = 'pingcap.com'
+        V = 'v1alpha1'
+        ns = '{{workflow.namespace}}'
+
+
+        def redeploy(name='main', branch='release-4.0',pd_replica=1,db_replica=1,kv_replica=1):
+            corev1 = client.CoreV1Api()
+            crd = client.CustomObjectsApi()
+
+            # delete old one
+            try:
+                crd.delete_namespaced_custom_object(G, V, ns, 'tidbclusters', name)
+                corev1.delete_collection_namespaced_persistent_volume_claim(
+                    ns, label_selector=f'app.kubernetes.io/instance={name}')
+            except:
+                pass
+            try:
+                corev1.delete_namespaced_config_map(f'{name}-tidb', ns)
+            except:
+                pass
+            try:
+                corev1.delete_namespaced_config_map(f'{name}-tikv', ns)
+            except:
+                pass
+
+            # deploy new one
+            corev1.create_namespaced_config_map(ns, {
+                'apiVersion': 'v1',
+                'kind': 'ConfigMap',
+                'metadata': {
+                    'name': f'{name}-tikv',
+                    'namespace': ns,
+                },
+                'data': {
+                    'config-file': '',
+                    'startup-script': """#!/bin/sh
+
+        # This script is used to start tikv containers in kubernetes cluster
+
+        # Use DownwardAPIVolumeFiles to store informations of the cluster:
+        # https://kubernetes.io/docs/tasks/inject-data-application/downward-api-volume-expose-pod-information/#the-downward-api
+        #
+        #   runmode="normal/debug"
+        #
+
+        set -uo pipefail
+
+        ANNOTATIONS="/etc/podinfo/annotations"
+
+        if [[ ! -f "${ANNOTATIONS}" ]]
+        then
+            echo "${ANNOTATIONS} does't exist, exiting."
+            exit 1
+        fi
+        source ${ANNOTATIONS} 2>/dev/null
+
+        runmode=${runmode:-normal}
+        if [[ X${runmode} == Xdebug ]]
+        then
+          echo "entering debug mode."
+          tail -f /dev/null
+        fi
+
+        # Use HOSTNAME if POD_NAME is unset for backward compatibility.
+        POD_NAME=${POD_NAME:-$HOSTNAME}
+        ARGS="--pd=http://${CLUSTER_NAME}-pd:2379 \
+        --advertise-addr=${POD_NAME}.${HEADLESS_SERVICE_NAME}.${NAMESPACE}.svc:20160 \
+        --addr=0.0.0.0:20160 \
+        --status-addr=0.0.0.0:20180 \
+        --data-dir=/var/lib/tikv \
+        --capacity=${CAPACITY} \
+        --config=/etc/tikv/tikv.toml
+        "
+
+        if [ ! -z "${STORE_LABELS:-}" ]; then
+          LABELS=" --labels ${STORE_LABELS} "
+          ARGS="${ARGS}${LABELS}"
+        fi
+
+        echo "starting tikv-server ..."
+        echo "/tikv-server ${ARGS}"
+        # exec /tikv-server ${ARGS}
+        while true; do
+            /tikv-server ${ARGS} 2>&1 | tee -a /var/lib/tikv/tikv.log
+            sleep 1
+        done
+        """,
+                }
+            })
+            corev1.create_namespaced_config_map(ns, {
+                'apiVersion': 'v1',
+                'kind': 'ConfigMap',
+                'metadata': {
+                    'name': f'{name}-tidb',
+                    'namespace': ns,
+                },
+                'data': {
+                    'config-file': """
+        oom-action = 'log'
+        enable-dynamic-config = false
+        [performance]
+        txn-total-size-limit = 10737418240
+        max-txn-ttl = 7200000
+        """,
+                    'startup-script': """#!/bin/sh
+
+        # This script is used to start tidb containers in kubernetes cluster
+
+        # Use DownwardAPIVolumeFiles to store informations of the cluster:
+        # https://kubernetes.io/docs/tasks/inject-data-application/downward-api-volume-expose-pod-information/#the-downward-api
+        #
+        #   runmode="normal/debug"
+        #
+        set -uo pipefail
+
+        ANNOTATIONS="/etc/podinfo/annotations"
+
+        if [[ ! -f "${ANNOTATIONS}" ]]
+        then
+            echo "${ANNOTATIONS} does't exist, exiting."
+            exit 1
+        fi
+        source ${ANNOTATIONS} 2>/dev/null
+        runmode=${runmode:-normal}
+        if [[ X${runmode} == Xdebug ]]
+        then
+            echo "entering debug mode."
+            tail -f /dev/null
+        fi
+
+        # Use HOSTNAME if POD_NAME is unset for backward compatibility.
+        POD_NAME=${POD_NAME:-$HOSTNAME}
+        ARGS="--store=tikv \
+        --advertise-address=${POD_NAME}.${HEADLESS_SERVICE_NAME}.${NAMESPACE}.svc \
+        --host=0.0.0.0 \
+        --path=${CLUSTER_NAME}-pd:2379 \
+        --config=/etc/tidb/tidb.toml
+        "
+
+        if [[ X${BINLOG_ENABLED:-} == Xtrue ]]
+        then
+            ARGS="${ARGS} --enable-binlog=true"
+        fi
+
+        SLOW_LOG_FILE=${SLOW_LOG_FILE:-""}
+        if [[ ! -z "${SLOW_LOG_FILE}" ]]
+        then
+            ARGS="${ARGS} --log-slow-query=${SLOW_LOG_FILE:-}"
+        fi
+
+        echo "start tidb-server ..."
+        echo "/tidb-server ${ARGS}"
+        # exec /tidb-server ${ARGS}
+        while true; do
+            /tidb-server ${ARGS} 2>&1 | tee -a /var/log/tidb/tidb.log
+            sleep 1
+        done
+        """
+                }
+            })
+            return crd.create_namespaced_custom_object(G, V, ns, 'tidbclusters', {
+                "apiVersion": f"{G}/{V}",
+                "kind": "TidbCluster",
+                "metadata": {
+                    "name": name,
+                    "namespace": ns,
+                },
+                "spec": {
+                    "imagePullPolicy": "Always",
+                    "pvReclaimPolicy": "Delete",
+                    "schedulerName": "tidb-scheduler",
+                    "pd": {
+                        "config": {},
+                        "image": f"hub.pingcap.net/qa/pd:{branch}",
+                        "replicas": pd_replica,
+                        "requests": {
+                            "storage": "10Gi"
+                        }
+                    },
+                    "tidb": {
+                        "image": f"hub.pingcap.net/qa/tidb:{branch}",
+                        "replicas": db_replica,
+                        "service": {
+                            "type": "NodePort"
+                        },
+                        "requests": {
+                            "memory": "50Gi"
+                        },
+                        "limits": {
+                            "memory": "50Gi"
+                        }
+                    },
+                    "tikv": {
+                        "image": f"hub.pingcap.net/qa/tikv:{branch}",
+                        "replicas": kv_replica,
+                        "limits": {
+                            "memory": "16Gi"
+                        },
+                        "requests": {
+                            "storage": "40Gi"
+                        }
+                    }
+                }
+            })
+
+
+        def ping_tidb(tc, timeout=600):
+            tc_name = tc['metadata']['name']
+            db_host = f"{tc_name}-tidb"
+            pd_host = f"{tc_name}-pd"
+            t = time.time()
+            while True:
+                try:
+                    conn = pymysql.connect(host=db_host, port=4000, user='root')
+                    with conn.cursor() as s:
+                        s.execute('select tidb_version()')
+                        logging.info("tidb version\n%s", s.fetchone()[0])
+                    break
+                except Exception as e:
+                    logging.info(f"ping {db_host}: {e}")
+                    time.sleep(5)
+                    if time.time() - t > timeout:
+                        raise RuntimeError('timeout')
+            return [{"db_host":db_host,"pd_host":pd_host}]
+
+
+        if __name__ == '__main__':
+            logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s [%(name)s:%(lineno)d] - %(message)s')
+            config.load_incluster_config()
+            json.dump(ping_tidb(redeploy(name='{{inputs.parameters.name}}',branch='{{inputs.parameters.branch}}',pd_replica={{inputs.parameters.pd-replica}},db_replica={{inputs.parameters.db-replica}},kv_replica={{inputs.parameters.kv-replica}})),sys.stdout)
