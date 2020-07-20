@@ -1,0 +1,12 @@
+[package]
+name = "guessing_game"
+version = "0.1.0"
+authors = ["lilinghai <jidushanlixi@163.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+# Semantic version, match multi version that meets with the version, Cargo.lock identifies a version.
+# Crates.io
+# get all dependencies
+[dependencies]
+rand = "0.5.5"
