@@ -9,10 +9,12 @@ import (
 	"log"
 )
 
+/*
+ br restore 20k+ 小表（100 rows）或使用 sql coverage 直接生成
+ apply snapshot 或 ingest sst 后删除所有的表数据，观察 gc
+*/
 func main() {
 	var dsn string
-	var replicaNum int
-	flag.IntVar(&replicaNum, "replica", 1, "tiflash replica number")
 	flag.StringVar(&dsn, "dsn", "root:@tcp(127.0.0.1:4000)/test", "dsn")
 	flag.Parse()
 	mdb, err := sql.Open("mysql", dsn)
@@ -37,7 +39,7 @@ func main() {
 	}
 	for i, tn := range tnames {
 		log.Println(i, len(tnames))
-		_, err := mdb.Exec(fmt.Sprintf("ALTER TABLE %s SET TIFLASH REPLICA %d", tn, replicaNum))
+		_, err := mdb.Exec(fmt.Sprintf("delete from %s", tn, tn))
 		if err != nil {
 			log.Fatalln(err)
 		}
