@@ -67,7 +67,7 @@ func main() {
 				if err != nil {
 					log.Fatalln(err)
 				}
-				available := 0
+				available := selectCnt(mdb, `select count(*) from information_schema.tiflash_replica where TABLE_SCHEMa="tpcc" and TABLE_NAME="customer" and AVAILABLE=1`)
 				for available == 0 {
 					time.Sleep(30 * time.Second)
 					available = selectCnt(mdb, `select count(*) from information_schema.tiflash_replica where TABLE_SCHEMa="tpcc" and TABLE_NAME="customer" and AVAILABLE=1`)
