@@ -7,7 +7,7 @@ import (
 	"log"
 	"time"
 )
-
+// snapshot apply 的时候做 ddl 操作
 func main() {
 	// tpcc customer, PRIMARY KEY (`c_w_id`,`c_d_id`,`c_id`)
 	// 10k , 10, 3000
