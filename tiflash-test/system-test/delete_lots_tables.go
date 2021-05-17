@@ -39,7 +39,7 @@ func main() {
 	}
 	for i, tn := range tnames {
 		log.Println(i, len(tnames))
-		_, err := mdb.Exec(fmt.Sprintf("delete from %s", tn, tn))
+		_, err := mdb.Exec(fmt.Sprintf("delete from %s", tn))
 		if err != nil {
 			log.Fatalln(err)
 		}
