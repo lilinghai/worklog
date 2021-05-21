@@ -32,6 +32,17 @@ func main() {
 		log.Fatalln(err)
 	}
 	shellCommand(scaleOut)
+	go func(){
+		_, err = mdb.Exec("set @@tidb_isolation_read_engines='tiflash'")
+		if err != nil {
+			log.Println(err)
+		}
+		for i := 0; i < 10; i++ {
+			for _, aps := range apSql {
+				selectCnt(mdb, aps)
+			}
+		}
+	}()
 	go func() {
 		for true {
 			ubegin := 1
@@ -50,11 +61,6 @@ func main() {
 				}
 				dbegin += 1
 				ubegin += 1
-			}
-			for i := 0; i < 10; i++ {
-				for _, aps := range apSql {
-					selectCnt(mdb, aps)
-				}
 			}
 		}
 	}()

@@ -67,6 +67,10 @@ func main() {
 					time.Sleep(30 * time.Second)
 					available = selectCnt(mdb, `select count(*) from information_schema.tiflash_replica where TABLE_SCHEMa="tpcc" and TABLE_NAME="customer" and AVAILABLE=1`)
 				}
+				_, err = mdb.Exec("set @@tidb_allow_fallback_to_tikv='tiflash'")
+				if err != nil {
+					log.Println(err)
+				}
 				_, err = mdb.Exec("set @@tidb_isolation_read_engines='tiflash'")
 				if err != nil {
 					log.Println(err)
