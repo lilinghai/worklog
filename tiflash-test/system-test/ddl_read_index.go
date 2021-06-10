@@ -5,8 +5,10 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
 	"log"
+	"strings"
 	"time"
 )
+
 /*
 循环执行一下步骤
 stop tiflash node
@@ -53,31 +55,43 @@ func main() {
 		for true {
 			ddlSql2 := append(ddlSql, ddlDropSql...)
 			for _, s := range ddlSql2 {
-				shellCommand("tiup cluster stop simple -R tiflash")
-				time.Sleep(2 * time.Minute)
-				_, err := mdb.Exec(s)
+				log.Println("stop tiflash nodes")
+				_, err := shellCommand("tiup cluster stop tiflash-test -R tiflash")
 				if err != nil {
 					log.Fatalln(err)
 				}
-				shellCommand("tiup cluster start simple -R tiflash")
+				time.Sleep(1 * time.Minute)
+				log.Println("execute sql " + s)
+				_, err = mdb.Exec(s)
+				if err != nil {
+					log.Fatalln(err)
+				}
+				log.Println("start tiflash nodes")
+				_, err = shellCommand("tiup cluster start tiflash-test -R tiflash")
+				if err != nil {
+					log.Fatalln(err)
+				}
 				// 是否需要等待 2 分钟？
 				//time.Sleep(2 * time.Minute)
-				available := selectCnt(mdb, `select count(*) from information_schema.tiflash_replica where TABLE_SCHEMa="tpcc" and TABLE_NAME="customer" and AVAILABLE=1`)
-				for available == 0 {
-					time.Sleep(30 * time.Second)
-					available = selectCnt(mdb, `select count(*) from information_schema.tiflash_replica where TABLE_SCHEMa="tpcc" and TABLE_NAME="customer" and AVAILABLE=1`)
-				}
-				_, err = mdb.Exec("set @@tidb_allow_fallback_to_tikv='tiflash'")
-				if err != nil {
-					log.Println(err)
-				}
 				_, err = mdb.Exec("set @@tidb_isolation_read_engines='tiflash'")
 				if err != nil {
 					log.Println(err)
 				}
 				for i := 0; i < 10; i++ {
 					for _, aps := range apSql {
-						selectCnt(mdb, aps)
+						log.Println("execute sql " + aps)
+						_, err := selectCnt(mdb, aps)
+						if err != nil {
+							if strings.Contains(err.Error(), "Region epoch not match") ||
+								strings.Contains(err.Error(), "Region is unavailable") ||
+								strings.Contains(err.Error(), "close of nil channel") ||
+								strings.Contains(err.Error(), "TiFlash server timeout") ||
+								strings.Contains(err.Error(), "MPP Task canceled because it seems hangs") {
+								log.Println(err)
+							} else {
+								log.Fatalln(err)
+							}
+						}
 					}
 				}
 			}
@@ -85,4 +99,3 @@ func main() {
 	}()
 	time.Sleep(20 * time.Hour)
 }
-

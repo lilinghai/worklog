@@ -2,34 +2,34 @@ package main
 
 import (
 	"database/sql"
-	"log"
 	"os/exec"
 )
 
-func selectCnt(d *sql.DB, sql string) int {
+// filter some known issues
+// https://github.com/pingcap/tics/issues/1947
+func selectCnt(d *sql.DB, sql string) (int, error) {
 	rows, err := d.Query(sql)
-	defer rows.Close()
+	defer func() {
+		if rows != nil {
+			rows.Close()
+		}
+	}()
 	if err != nil {
-		log.Fatalln(err)
+		//if strings.Contains(err.Error(), "newer than query schema version")
+		return 0, err
 	}
 	var cnt int
 	for rows.Next() {
 		if rows.Err() != nil {
-			log.Fatalln(err)
+			return 0, err
 		}
 		if err := rows.Scan(&cnt); err != nil {
-			log.Fatalln(err)
+			return 0, err
 		}
 	}
-	log.Println(cnt)
-	return cnt
+	return cnt, nil
 }
 
-func shellCommand(cmd string) {
-	out, err := exec.Command("bash", "-c", cmd).Output()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println(string(out))
+func shellCommand(cmd string) ([]byte, error) {
+	return exec.Command("bash", "-c", cmd).Output()
 }
