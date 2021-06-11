@@ -54,7 +54,7 @@ func main() {
 		"select count(*) from customer",
 		"select sum(c_payment_cnt) from customer",
 	}
-	mdb, err := sql.Open("mysql", "root:@tcp(172.16.6.27:4019)/tpcc")
+	mdb, err := sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatalln(err)
 	}
