@@ -2,6 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"flag"
+	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
 	"log"
@@ -17,6 +19,11 @@ start tiflash node
 ap select
 */
 func main() {
+	var dsn string
+	var clusterName string
+	flag.StringVar(&clusterName, "cn", "simple", "cluster name")
+	flag.StringVar(&dsn, "dsn", "root:@tcp(127.0.0.1:4000)/test", "dsn")
+	flag.Parse()
 	// tpcc customer, PRIMARY KEY (`c_w_id`,`c_d_id`,`c_id`)
 	// 10k , 10, 3000
 	//warehouse := 10000
@@ -32,10 +39,10 @@ func main() {
 		"alter table customer rename column extra2 to extra",
 		"alter table customer rename index extra to extra2",
 		"alter table customer rename index extra2 to extra",
-		"alter table t drop index extra",
+		"alter table customer drop index extra",
 		"alter table customer drop column extra",
-		"rename table customer to customer2",
-		"rename table customer2 to customer",
+		//"rename table customer to customer2",
+		//"rename table customer2 to customer",
 
 		// recovery table
 		//alter table partition is unsupported
@@ -55,8 +62,8 @@ func main() {
 		for true {
 			ddlSql2 := append(ddlSql, ddlDropSql...)
 			for _, s := range ddlSql2 {
-				log.Println("stop tiflash nodes")
-				_, err := shellCommand("tiup cluster stop tiflash-test -R tiflash")
+				log.Println("stop tiflash nodes " + clusterName)
+				_, err := shellCommand(fmt.Sprintf("tiup cluster stop %s -R tiflash", clusterName))
 				if err != nil {
 					log.Fatalln(err)
 				}
@@ -66,8 +73,8 @@ func main() {
 				if err != nil {
 					log.Fatalln(err)
 				}
-				log.Println("start tiflash nodes")
-				_, err = shellCommand("tiup cluster start tiflash-test -R tiflash")
+				log.Println("start tiflash nodes " + clusterName)
+				_, err = shellCommand(fmt.Sprintf("tiup cluster start %s -R tiflash", clusterName))
 				if err != nil {
 					log.Fatalln(err)
 				}
