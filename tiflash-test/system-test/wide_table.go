@@ -12,10 +12,6 @@ import (
 
 // 宽表 ，热点写入
 func main() {
-	for i := 0; i < 10; i++ {
-		fmt.Println(RandString(10))
-
-	}
 	var dsn string
 	var threads int
 	flag.IntVar(&threads, "threads", 1, "threads to insert")
@@ -25,7 +21,11 @@ func main() {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	maxLen := 102400
+	maxLen := 10240
+	_, err = mdb.Exec("drop table if exists t")
+	if err != nil {
+		log.Println(err)
+	}
 	createSql := `create table t(a bigint not null auto_increment,b varchar(10240),c text,d mediumtext,e longtext,primary key(a))`
 	insertSql := `insert into t(b,c,d,e) values("%s","%s","%s","%s")`
 	_, err = mdb.Exec(createSql)
