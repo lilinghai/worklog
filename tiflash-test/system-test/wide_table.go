@@ -37,9 +37,11 @@ func main() {
 		log.Println(err)
 	}
 	for i := 0; i < threads; i++ {
+		time.Sleep(1 * time.Second)
 		go func() {
+			j := 0
+			t := i
 			for true {
-				j := 0
 				rand.Seed(time.Now().UnixNano())
 				_, err = mdb.Exec(fmt.Sprintf(insertSql,
 					RandString(rand.Intn(maxLen)),
@@ -50,10 +52,9 @@ func main() {
 					log.Println(err)
 				}
 				j = j + 1
-				log.Println(fmt.Sprintf("thread %d,loop %d", i, j))
+				log.Println(fmt.Sprintf("thread %d,loop %d", t, j))
 			}
 		}()
 	}
-
 	time.Sleep(20 * time.Hour)
 }
