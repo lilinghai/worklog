@@ -38,14 +38,19 @@ func main() {
 	}
 	for i := 0; i < threads; i++ {
 		go func() {
-			rand.Seed(time.Now().UnixNano())
-			_, err = mdb.Exec(fmt.Sprintf(insertSql,
-				RandString(rand.Intn(maxLen)),
-				RandString(rand.Intn(maxLen)),
-				RandString(rand.Intn(maxLen)),
-				RandString(rand.Intn(maxLen))))
-			if err != nil {
-				log.Println(err)
+			for true {
+				j := 0
+				rand.Seed(time.Now().UnixNano())
+				_, err = mdb.Exec(fmt.Sprintf(insertSql,
+					RandString(rand.Intn(maxLen)),
+					RandString(rand.Intn(maxLen)),
+					RandString(rand.Intn(maxLen)),
+					RandString(rand.Intn(maxLen))))
+				if err != nil {
+					log.Println(err)
+				}
+				j = j + 1
+				log.Println(fmt.Sprintf("thread %d,loop %d", i, j))
 			}
 		}()
 	}
