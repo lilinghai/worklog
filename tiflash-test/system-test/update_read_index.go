@@ -46,6 +46,10 @@ func main() {
 			log.Fatalln(err)
 		}
 		time.Sleep(1 * time.Minute)
+		_, err = mdb.Exec("set @@tidb_isolation_read_engines='tikv'")
+		if err != nil {
+			log.Println(err)
+		}
 		for _, s := range dmlSql {
 			p := dbegin
 			if strings.Contains(s, "update") {
